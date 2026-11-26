@@ -57,13 +57,13 @@ export function SettingsPage() {
       </header>
 
       <section className="card">
-        <h2>하루 새 단어 수</h2>
+        <h2>새 단어 한 세트</h2>
         <Chips
-          value={settings.newPerDay}
-          options={[3, 5, 10, 15].map((n) => ({ value: n, label: `${n}개` }))}
-          onChange={(v) => set({ newPerDay: v })}
+          value={settings.setSize}
+          options={[5, 10, 15, 20].map((n) => ({ value: n, label: `${n}개씩` }))}
+          onChange={(v) => set({ setSize: v })}
         />
-        <p className="tiny">처음엔 5개를 추천해요. 복습이 쌓이면 하루 시간이 늘어나요.</p>
+        <p className="tiny">하루 제한은 없어요. 한 세트를 끝내고 시간이 되면 "한 세트 더"를 누르세요. 많이 배운 날은 다음 날부터 복습도 그만큼 늘어나요.</p>
       </section>
 
       <section className="card">
@@ -131,7 +131,7 @@ export function SettingsPage() {
       <button className="secondary" onClick={() => location.reload()}>
         🔄 앱 새로고침 (업데이트가 안 보일 때)
       </button>
-      <p className="tiny center">日本語 매일 20분 · v0.1.2</p>
+      <p className="tiny center">日本語 매일 20분 · v0.1.3</p>
     </>
   )
 }

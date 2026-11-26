@@ -12,7 +12,7 @@ export interface DayLog {
 export type Direction = 'ja-ko' | 'ko-ja' | 'mix'
 
 export interface Settings {
-  newPerDay: number
+  setSize: number // 새 단어 한 세트의 개수 (하루에 몇 세트든 자유롭게)
   direction: Direction
   autoPlay: boolean
   rate: number
@@ -20,7 +20,7 @@ export interface Settings {
 }
 
 export const defaultSettings: Settings = {
-  newPerDay: 5,
+  setSize: 5,
   direction: 'ja-ko',
   autoPlay: true,
   rate: 0.9,

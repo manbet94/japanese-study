@@ -15,14 +15,17 @@ const TABS: { id: Tab; icon: string; label: string }[] = [
 
 function App() {
   const [tab, setTab] = useState<Tab>('home')
-  const [studying, setStudying] = useState<StudyMode | null>(null)
+  // run: 같은 모드를 연달아 시작해도(세트 한 번 더) 화면을 새로 만들기 위한 번호
+  const [studying, setStudying] = useState<{ mode: StudyMode; run: number } | null>(null)
+  const start = (mode: StudyMode) => setStudying((s) => ({ mode, run: (s?.run ?? 0) + 1 }))
 
-  if (studying) return <Study mode={studying} onExit={() => setStudying(null)} />
+  if (studying)
+    return <Study key={studying.run} mode={studying.mode} onExit={() => setStudying(null)} onStart={start} />
 
   return (
     <>
       <main className="app">
-        {tab === 'home' && <Home onStart={setStudying} />}
+        {tab === 'home' && <Home onStart={start} />}
         {tab === 'words' && <WordList />}
         {tab === 'settings' && <SettingsPage />}
       </main>

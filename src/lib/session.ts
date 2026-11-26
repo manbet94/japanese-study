@@ -1,9 +1,11 @@
-// 오늘 공부할 카드 목록 만들기: 복습할 단어(복습일이 된 것) + 새 단어
+// 공부할 카드 목록 만들기
+// - 복습: 복습일이 된 단어 전부
+// - 새 단어: 한 세트(5개, 10개 …)씩. 하루에 몇 세트든 원하는 만큼
 import { allWords, wordById, type Word } from '../data/vocab'
 import { db, type Direction, type Settings } from '../db/db'
 import { newCard, type CardState } from './srs'
 
-export type StudyMode = 'all' | 'review' | 'new'
+export type StudyMode = 'review' | 'new'
 
 /** 새 단어 소개 카드 */
 export interface IntroItem {
@@ -25,8 +27,9 @@ export interface QuizItem {
 export type QueueItem = IntroItem | QuizItem
 
 export interface TodayCounts {
-  due: number
-  newLeft: number
+  due: number // 오늘 복습할 단어
+  nextSet: number // 다음 새 단어 세트 크기 (남은 단어가 적으면 줄어듦)
+  unseen: number // 아직 안 배운 단어 전체
 }
 
 export function shuffle<T>(arr: T[]): T[] {
@@ -55,12 +58,9 @@ export function quizItem(word: Word, card: CardState, isNew: boolean, front: 'ja
   return { kind: 'quiz', word, card, isNew, front, choices: makeChoices(word), retry }
 }
 
-async function newWordsLeft(today: string, settings: Settings): Promise<Word[]> {
-  const log = await db.logs.get(today)
-  const left = Math.max(0, settings.newPerDay - (log?.newLearned ?? 0))
-  if (left === 0) return []
+async function unseenWords(): Promise<Word[]> {
   const seen = new Set(await db.cards.toCollection().primaryKeys())
-  return allWords.filter((w) => !seen.has(w.id)).slice(0, left)
+  return allWords.filter((w) => !seen.has(w.id))
 }
 
 async function dueCards(today: string): Promise<CardState[]> {
@@ -69,17 +69,18 @@ async function dueCards(today: string): Promise<CardState[]> {
 }
 
 export async function getTodayCounts(today: string, settings: Settings): Promise<TodayCounts> {
-  const [due, fresh] = await Promise.all([dueCards(today), newWordsLeft(today, settings)])
-  return { due: due.length, newLeft: fresh.length }
+  const [due, unseen] = await Promise.all([dueCards(today), unseenWords()])
+  return { due: due.length, nextSet: Math.min(settings.setSize, unseen.length), unseen: unseen.length }
 }
 
-export async function buildQueue(today: string, settings: Settings, mode: StudyMode = 'all'): Promise<QueueItem[]> {
-  const due = mode === 'new' ? [] : await dueCards(today)
-  const fresh = mode === 'review' ? [] : await newWordsLeft(today, settings)
-
-  const reviews = shuffle(due).map((card) => quizItem(wordById.get(card.id)!, card, false, pickFront(settings.direction)))
-  // 새 단어: 먼저 소개 카드로 보여주고, 다 본 뒤에 문제로 확인 (처음엔 일본어 → 뜻)
+export async function buildQueue(today: string, settings: Settings, mode: StudyMode): Promise<QueueItem[]> {
+  if (mode === 'review') {
+    const due = shuffle(await dueCards(today))
+    return due.map((card) => quizItem(wordById.get(card.id)!, card, false, pickFront(settings.direction)))
+  }
+  // 새 단어 한 세트: 먼저 소개 카드로 보여주고, 다 본 뒤에 문제로 확인 (처음엔 일본어 → 뜻)
+  const fresh = (await unseenWords()).slice(0, settings.setSize)
   const intros: IntroItem[] = fresh.map((word) => ({ kind: 'intro', word }))
-  const newQuizzes = shuffle(fresh).map((word) => quizItem(word, newCard(word.id, today), true, 'ja'))
-  return [...reviews, ...intros, ...newQuizzes]
+  const quizzes = shuffle(fresh).map((word) => quizItem(word, newCard(word.id, today), true, 'ja'))
+  return [...intros, ...quizzes]
 }

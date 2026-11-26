@@ -3,7 +3,7 @@ import { Furigana, WordText } from '../components/Furigana'
 import { examplePlain, type Word } from '../data/vocab'
 import { bumpLog, db, getSettings, type Settings } from '../db/db'
 import { todayStr } from '../lib/date'
-import { buildQueue, getTodayCounts, quizItem, type QueueItem, type StudyMode } from '../lib/session'
+import { buildQueue, getTodayCounts, quizItem, type QueueItem, type StudyMode, type TodayCounts } from '../lib/session'
 import { speakJapanese } from '../lib/speech'
 import { nextInterval, review } from '../lib/srs'
 
@@ -27,7 +27,15 @@ function ExampleBox({ word, rate, furigana, showKo }: { word: Word; rate: number
   )
 }
 
-export function Study({ mode, onExit }: { mode: StudyMode; onExit: () => void }) {
+export function Study({
+  mode,
+  onExit,
+  onStart,
+}: {
+  mode: StudyMode
+  onExit: () => void
+  onStart: (mode: StudyMode) => void
+}) {
   const [today] = useState(todayStr)
   const [settings, setSettings] = useState<Settings | null>(null)
   const [queue, setQueue] = useState<QueueItem[] | null>(null)
@@ -35,6 +43,7 @@ export function Study({ mode, onExit }: { mode: StudyMode; onExit: () => void })
   const [picked, setPicked] = useState<Word | null>(null)
   const [score, setScore] = useState({ correct: 0, wrong: 0 })
   const [busy, setBusy] = useState(false)
+  const [after, setAfter] = useState<TodayCounts | null>(null) // 끝난 뒤 남은 양
 
   useEffect(() => {
     getSettings().then(async (s) => {
@@ -52,18 +61,23 @@ export function Study({ mode, onExit }: { mode: StudyMode; onExit: () => void })
     if (item.kind === 'intro' || item.front === 'ja') speakJapanese(item.word.reading, rate)
   }, [item, settings, rate])
 
+  // 다 끝나면: 남은 복습이 없으면 오늘 완료 표시
+  const finished = !!queue && !!settings && idx >= queue.length
+  useEffect(() => {
+    if (!finished || !settings) return
+    getTodayCounts(today, settings).then(async (c) => {
+      if (c.due === 0 && (await db.logs.get(today))?.reviews) await bumpLog(today, { done: true })
+      setAfter(c)
+    })
+  }, [finished, settings, today])
+
   if (!queue || !settings) return null
   const furigana = settings.furigana
 
   function next() {
-    if (!queue) return
-    if (idx + 1 >= queue.length) {
-      getTodayCounts(today, settings!).then((c) => {
-        if (c.due === 0) bumpLog(today, { done: true })
-      })
-    }
-    setIdx(idx + 1)
+    setIdx((i) => i + 1)
     setPicked(null)
+    window.scrollTo(0, 0)
   }
 
   async function choose(choice: Word) {
@@ -91,21 +105,30 @@ export function Study({ mode, onExit }: { mode: StudyMode; onExit: () => void })
           {total > 0 ? (
             <>
               <div className="big-emoji">🎉</div>
-              <h2>학습 완료!</h2>
+              <h2>{mode === 'new' ? '세트 완료!' : '복습 완료!'}</h2>
               <p className="hint">
                 맞힘 <b className="good-text">{score.correct}</b> · 틀림 <b className="bad-text">{score.wrong}</b>
               </p>
               <p className="tiny">맞힌 단어는 며칠 뒤에, 틀린 단어는 내일 다시 나와요.</p>
             </>
           ) : (
-            <>
-              <h2>지금 할 단어가 없어요</h2>
-              <p className="hint">설정에서 하루 새 단어 수를 늘릴 수 있어요.</p>
-            </>
+            <h2>지금 할 단어가 없어요</h2>
           )}
-          <button className="primary" onClick={onExit}>
-            홈으로
-          </button>
+          <div className="done-actions">
+            {after && after.due > 0 && (
+              <button className="primary" onClick={() => onStart('review')}>
+                복습하기 ({after.due})
+              </button>
+            )}
+            {after && after.nextSet > 0 && (
+              <button className={after.due > 0 ? 'secondary big' : 'primary'} onClick={() => onStart('new')}>
+                새 단어 {after.nextSet}개 더 배우기
+              </button>
+            )}
+            <button className="secondary big" onClick={onExit}>
+              오늘은 여기까지 · 홈으로
+            </button>
+          </div>
         </div>
       </div>
     )
@@ -138,6 +161,9 @@ export function Study({ mode, onExit }: { mode: StudyMode; onExit: () => void })
           <ListenButton text={word.reading} rate={rate} />
           <div className="meaning">{word.meaning}</div>
           <ExampleBox word={word} rate={rate} furigana showKo />
+          <button className="primary" onClick={next}>
+            외웠어요 →
+          </button>
         </div>
       ) : (
         // ── 3지선다 문제
@@ -157,12 +183,12 @@ export function Study({ mode, onExit }: { mode: StudyMode; onExit: () => void })
                   <Furigana text={word.example} show={furigana} />
                 </div>
               )}
-              <p className="question">뜻을 고르세요</p>
+              {!picked && <p className="question">뜻을 고르세요</p>}
             </>
           ) : (
             <>
               <div className="meaning-big">{word.meaning}</div>
-              <p className="question">🗣️ 먼저 소리 내어 말해 보고, 일본어를 고르세요</p>
+              {!picked && <p className="question">🗣️ 먼저 소리 내어 말해 보고, 일본어를 고르세요</p>}
             </>
           )}
 
@@ -178,37 +204,32 @@ export function Study({ mode, onExit }: { mode: StudyMode; onExit: () => void })
           </div>
 
           {picked && (
-            <div className="answer">
-              <div className={`result ${isRight ? 'good-text' : 'bad-text'}`}>
-                {isRight
-                  ? `정답! ${item.retry ? '' : `${nextInterval(item.card, true)}일 후에 다시 볼게요`}`
-                  : `오답 — 정답은 위의 초록색${item.retry ? '' : ', 내일 다시 볼게요'}`}
+            <>
+              <div className="result-bar">
+                <span className={`result ${isRight ? 'good-text' : 'bad-text'}`}>
+                  {isRight
+                    ? `⭕ 정답!${item.retry ? '' : ` ${nextInterval(item.card, true)}일 후 복습`}`
+                    : `❌ 오답${item.retry ? '' : ' · 내일 다시'}`}
+                </span>
+                <button className="primary next" onClick={next} disabled={busy}>
+                  다음 →
+                </button>
               </div>
-              {item.front === 'ko' && (
-                <>
-                  <div className="word-mid">
-                    <WordText word={word.word} reading={word.reading} />
-                  </div>
-                  <ListenButton text={word.reading} rate={rate} />
-                </>
-              )}
-              <ExampleBox word={word} rate={rate} furigana showKo />
-            </div>
+              <div className="answer">
+                {item.front === 'ko' && (
+                  <>
+                    <div className="word-mid">
+                      <WordText word={word.word} reading={word.reading} />
+                    </div>
+                    <ListenButton text={word.reading} rate={rate} />
+                  </>
+                )}
+                <ExampleBox word={word} rate={rate} furigana showKo />
+              </div>
+            </>
           )}
         </div>
       )}
-
-      <div className="study-actions">
-        {item.kind === 'intro' ? (
-          <button className="primary" onClick={next}>
-            외웠어요 →
-          </button>
-        ) : (
-          <button className="primary" onClick={next} disabled={!picked || busy}>
-            다음
-          </button>
-        )}
-      </div>
     </div>
   )
 }
