@@ -16,6 +16,7 @@ export interface Settings {
   direction: Direction
   autoPlay: boolean
   rate: number
+  furigana: boolean // 한자 위에 히라가나 표시
 }
 
 export const defaultSettings: Settings = {
@@ -23,6 +24,7 @@ export const defaultSettings: Settings = {
   direction: 'ja-ko',
   autoPlay: true,
   rate: 0.9,
+  furigana: true,
 }
 
 interface KvRow {

@@ -1,43 +1,65 @@
 import { describe, expect, it } from 'vitest'
 import { allWords } from '../data/vocab'
 import { addDays, diffDays } from './date'
+import { hasKanji, kanaText, parseFurigana, plainText, wordSegments } from './furigana'
+import { makeChoices } from './session'
 import { newCard, review } from './srs'
 import { calcStreak } from './streak'
 
 const T = '2026-11-26'
 
-describe('srs', () => {
-  it('새 카드: 알맞음 → 1일, 다시 알맞음 → 3일, 그다음은 ease 배로 늘어남', () => {
-    let c = review(newCard('x', T), 'good', T)
-    expect(c.interval).toBe(1)
-    expect(c.due).toBe('2026-11-27')
-    c = review(c, 'good', c.due)
-    expect(c.interval).toBe(3)
-    c = review(c, 'good', c.due)
-    expect(c.interval).toBe(Math.round(3 * 2.5))
-    expect(c.reps).toBe(3)
+describe('복습 일정', () => {
+  it('맞히면 3일 → 7일 → 14일 → 30일 → 30일', () => {
+    let c = newCard('x', T)
+    const got: number[] = []
+    for (let i = 0; i < 5; i++) {
+      c = review(c, true, c.due)
+      got.push(c.interval)
+    }
+    expect(got).toEqual([3, 7, 14, 30, 30])
+    expect(review(newCard('x', T), true, T).due).toBe('2026-11-29')
   })
 
-  it('다시: 오늘 다시 보고, 연속 기록 초기화, 잊은 횟수 증가', () => {
-    let c = review(newCard('x', T), 'good', T)
-    c = review(c, 'again', '2026-11-27')
-    expect(c.interval).toBe(0)
+  it('틀리면 1일 후, 연속 기록은 처음부터', () => {
+    let c = review(review(newCard('x', T), true, T), true, T) // 7일 단계
+    c = review(c, false, T)
+    expect(c.interval).toBe(1)
     expect(c.due).toBe('2026-11-27')
     expect(c.reps).toBe(0)
     expect(c.lapses).toBe(1)
-    expect(c.ease).toBeCloseTo(2.3)
+    expect(review(c, true, c.due).interval).toBe(3)
+  })
+})
+
+describe('후리가나', () => {
+  it('예문 표기 해석', () => {
+    const s = '会社{かいしゃ}へ行{い}きます。'
+    expect(plainText(s)).toBe('会社へ行きます。')
+    expect(kanaText(s)).toBe('かいしゃへいきます。')
+    expect(parseFurigana(s)).toEqual([
+      { text: '会社', ruby: 'かいしゃ' },
+      { text: 'へ' },
+      { text: '行', ruby: 'い' },
+      { text: 'きます。' },
+    ])
   })
 
-  it('처음 보는 카드에서 다시를 눌러도 잊은 횟수는 늘지 않음', () => {
-    expect(review(newCard('x', T), 'again', T).lapses).toBe(0)
+  it('단어는 한자 부분에만 읽기', () => {
+    expect(wordSegments('大きい', 'おおきい')).toEqual([{ text: '大', ruby: 'おお' }, { text: 'きい' }])
+    expect(wordSegments('お茶', 'おちゃ')).toEqual([{ text: 'お' }, { text: '茶', ruby: 'ちゃ' }])
+    expect(wordSegments('勉強する', 'べんきょうする')).toEqual([{ text: '勉強', ruby: 'べんきょう' }, { text: 'する' }])
+    expect(wordSegments('バス', 'バス')).toEqual([{ text: 'バス' }])
   })
+})
 
-  it('쉬움은 알맞음보다 간격이 길고, ease는 1.3 아래로 안 내려감', () => {
-    const base = review(review(newCard('x', T), 'good', T), 'good', T)
-    expect(review(base, 'easy', T).interval).toBeGreaterThan(review(base, 'good', T).interval)
-    let c = newCard('y', T)
-    for (let i = 0; i < 10; i++) c = review(c, 'again', T)
-    expect(c.ease).toBe(1.3)
+describe('3지선다', () => {
+  it('정답 1개 + 서로 다른 오답 2개', () => {
+    for (const w of allWords.slice(0, 30)) {
+      const choices = makeChoices(w)
+      expect(choices).toHaveLength(3)
+      expect(choices.filter((c) => c.id === w.id)).toHaveLength(1)
+      expect(new Set(choices.map((c) => c.meaning)).size).toBe(3)
+    }
   })
 })
 
@@ -59,12 +81,28 @@ describe('streak', () => {
   })
 })
 
-describe('vocab data', () => {
-  it('단어 id가 겹치지 않고 빈 칸이 없음', () => {
+describe('단어 데이터', () => {
+  it('id가 겹치지 않고 빈 칸이 없음', () => {
     const ids = allWords.map((w) => w.id)
     expect(new Set(ids).size).toBe(ids.length)
     for (const w of allWords) {
       for (const v of [w.word, w.reading, w.meaning, w.example, w.exampleKo]) expect(v.trim()).not.toBe('')
     }
+  })
+
+  it('예문의 모든 한자에 읽기가 붙어 있음', () => {
+    const missing = allWords.filter((w) => {
+      const outside = parseFurigana(w.example)
+        .filter((s) => !s.ruby)
+        .map((s) => s.text)
+        .join('')
+      return hasKanji(outside)
+    })
+    expect(missing.map((w) => w.example)).toEqual([])
+  })
+
+  it('읽기 칸은 히라가나/가타카나만', () => {
+    const bad = allWords.filter((w) => hasKanji(w.reading))
+    expect(bad.map((w) => w.word)).toEqual([])
   })
 })

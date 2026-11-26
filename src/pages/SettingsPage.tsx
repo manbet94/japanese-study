@@ -77,7 +77,16 @@ export function SettingsPage() {
           ]}
           onChange={(v) => set({ direction: v })}
         />
-        <p className="tiny">"뜻 → 일본어"는 한국어를 보고 일본어로 말해 보는 연습이라 말하기에 좋아요.</p>
+        <p className="tiny">"뜻 → 일본어"는 한국어를 보고 일본어로 말해 보는 연습이라 말하기에 좋아요. 새 단어는 처음 한 번은 항상 일본어 → 뜻으로 나와요.</p>
+      </section>
+
+      <section className="card">
+        <h2>후리가나</h2>
+        <label className="toggle">
+          <input type="checkbox" checked={settings.furigana} onChange={(e) => set({ furigana: e.target.checked })} />
+          한자 위에 히라가나 표시
+        </label>
+        <p className="tiny">한자에 익숙해지면 꺼 보세요. 꺼도 새 단어 소개와 정답 화면에는 항상 표시돼요.</p>
       </section>
 
       <section className="card">
@@ -122,7 +131,7 @@ export function SettingsPage() {
       <button className="secondary" onClick={() => location.reload()}>
         🔄 앱 새로고침 (업데이트가 안 보일 때)
       </button>
-      <p className="tiny center">日本語 매일 20분 · v0.1.1</p>
+      <p className="tiny center">日本語 매일 20분 · v0.1.2</p>
     </>
   )
 }

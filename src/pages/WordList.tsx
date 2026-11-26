@@ -1,15 +1,19 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useState } from 'react'
-import { allWords, type Level } from '../data/vocab'
-import { db } from '../db/db'
+import { Furigana, WordText } from '../components/Furigana'
+import { allWords, examplePlain, type Level } from '../data/vocab'
+import { db, getSettings } from '../db/db'
 import { diffDays, todayStr } from '../lib/date'
 import { speakJapanese } from '../lib/speech'
+import { isKnown } from '../lib/srs'
 
 export function WordList() {
   const [level, setLevel] = useState<Level>('N5')
-  const cards = useLiveQuery(() => db.cards.toArray(), [])
-  if (!cards) return null
+  const [open, setOpen] = useState<string | null>(null)
+  const data = useLiveQuery(async () => ({ cards: await db.cards.toArray(), settings: await getSettings() }), [])
+  if (!data) return null
 
+  const { cards, settings } = data
   const byId = new Map(cards.map((c) => [c.id, c]))
   const today = todayStr()
   const words = allWords.filter((w) => w.level === level)
@@ -20,7 +24,7 @@ export function WordList() {
     if (!c) return { text: '아직', cls: '' }
     const days = diffDays(today, c.due)
     if (days <= 0) return { text: '오늘 복습', cls: 'due' }
-    if (c.interval >= 21) return { text: '외움', cls: 'known' }
+    if (isKnown(c)) return { text: '외움', cls: 'known' }
     return { text: `${days}일 후`, cls: 'learning' }
   }
 
@@ -29,7 +33,7 @@ export function WordList() {
       <header>
         <h1>단어장</h1>
         <p className="sub">
-          {level} · 배운 단어 {learned} / {words.length} · 눌러서 발음 듣기
+          {level} · 배운 단어 {learned} / {words.length} · 누르면 예문과 발음
         </p>
       </header>
       <div className="chips">
@@ -42,16 +46,38 @@ export function WordList() {
       <ul className="word-list">
         {words.map((w) => {
           const s = status(w.id)
+          const isOpen = open === w.id
           return (
-            <li key={w.id}>
-              <button onClick={() => speakJapanese(w.reading)}>
-                <span className="wl-ja" lang="ja">
-                  {w.word}
-                  {w.reading !== w.word && <small>{w.reading}</small>}
+            <li key={w.id} className={isOpen ? 'open' : ''}>
+              <button
+                className="wl-row"
+                onClick={() => {
+                  setOpen(isOpen ? null : w.id)
+                  if (!isOpen) speakJapanese(w.reading, settings.rate)
+                }}
+              >
+                <span className="wl-ja">
+                  <WordText word={w.word} reading={w.reading} show={settings.furigana} />
                 </span>
                 <span className="wl-ko">{w.meaning}</span>
                 <span className={`status ${s.cls}`}>{s.text}</span>
               </button>
+              {isOpen && (
+                <div className="wl-detail">
+                  <div className="example-ja">
+                    <Furigana text={w.example} show={settings.furigana} />
+                  </div>
+                  <div className="ko">{w.exampleKo}</div>
+                  <div className="row">
+                    <button className="listen" onClick={() => speakJapanese(w.reading, settings.rate)}>
+                      🔊 단어
+                    </button>
+                    <button className="listen" onClick={() => speakJapanese(examplePlain(w), settings.rate)}>
+                      🔊 문장
+                    </button>
+                  </div>
+                </div>
+              )}
             </li>
           )
         })}

@@ -1,72 +1,105 @@
 import { useEffect, useState } from 'react'
+import { Furigana, WordText } from '../components/Furigana'
+import { examplePlain, type Word } from '../data/vocab'
 import { bumpLog, db, getSettings, type Settings } from '../db/db'
 import { todayStr } from '../lib/date'
-import { buildQueue, type QueueItem } from '../lib/session'
+import { buildQueue, getTodayCounts, quizItem, type QueueItem, type StudyMode } from '../lib/session'
 import { speakJapanese } from '../lib/speech'
-import { intervalLabel, nextInterval, review, type Grade } from '../lib/srs'
+import { nextInterval, review } from '../lib/srs'
 
-const GRADES: { grade: Grade; label: string }[] = [
-  { grade: 'again', label: '다시' },
-  { grade: 'hard', label: '어려움' },
-  { grade: 'good', label: '알맞음' },
-  { grade: 'easy', label: '쉬움' },
-]
+function ListenButton({ text, rate, label = '다시 듣기' }: { text: string; rate: number; label?: string }) {
+  return (
+    <button className="listen" onClick={() => speakJapanese(text, rate)}>
+      🔊 {label}
+    </button>
+  )
+}
 
-export function Study({ onExit }: { onExit: () => void }) {
+function ExampleBox({ word, rate, furigana, showKo }: { word: Word; rate: number; furigana: boolean; showKo: boolean }) {
+  return (
+    <div className="example">
+      <div className="example-ja">
+        <Furigana text={word.example} show={furigana} />
+      </div>
+      {showKo && <div className="ko">{word.exampleKo}</div>}
+      <ListenButton text={examplePlain(word)} rate={rate} label="문장 듣기" />
+    </div>
+  )
+}
+
+export function Study({ mode, onExit }: { mode: StudyMode; onExit: () => void }) {
   const [today] = useState(todayStr)
   const [settings, setSettings] = useState<Settings | null>(null)
   const [queue, setQueue] = useState<QueueItem[] | null>(null)
   const [idx, setIdx] = useState(0)
-  const [revealed, setRevealed] = useState(false)
+  const [picked, setPicked] = useState<Word | null>(null)
+  const [score, setScore] = useState({ correct: 0, wrong: 0 })
   const [busy, setBusy] = useState(false)
-  const [reviewed, setReviewed] = useState(0)
 
   useEffect(() => {
     getSettings().then(async (s) => {
       setSettings(s)
-      setQueue(await buildQueue(today, s))
+      setQueue(await buildQueue(today, s, mode))
     })
-  }, [today])
+  }, [today, mode])
 
   const item = queue?.[idx]
   const rate = settings?.rate ?? 0.9
 
-  // 자동 발음: 일본어가 앞면이면 카드가 나올 때, 한국어가 앞면이면 정답을 볼 때
+  // 자동 발음: 새 단어 소개, 일본어를 보고 푸는 문제는 카드가 나올 때
   useEffect(() => {
     if (!item || !settings?.autoPlay) return
-    if ((item.front === 'ja') !== revealed) speakJapanese(item.word.reading, rate)
-  }, [item, revealed, settings, rate])
+    if (item.kind === 'intro' || item.front === 'ja') speakJapanese(item.word.reading, rate)
+  }, [item, settings, rate])
 
   if (!queue || !settings) return null
+  const furigana = settings.furigana
 
-  async function grade(g: Grade) {
-    if (!item || !queue || busy) return
-    setBusy(true)
-    const updated = review(item.card, g, today)
-    await db.cards.put(updated)
-    await bumpLog(today, { reviews: 1, newLearned: item.isNew ? 1 : 0 })
-    const next = g === 'again' ? [...queue, { ...item, card: updated, isNew: false }] : queue
-    if (idx + 1 >= next.length) await bumpLog(today, { done: true })
-    setQueue(next)
+  function next() {
+    if (!queue) return
+    if (idx + 1 >= queue.length) {
+      getTodayCounts(today, settings!).then((c) => {
+        if (c.due === 0) bumpLog(today, { done: true })
+      })
+    }
     setIdx(idx + 1)
-    setRevealed(false)
-    setReviewed((n) => n + 1)
+    setPicked(null)
+  }
+
+  async function choose(choice: Word) {
+    if (!item || item.kind !== 'quiz' || picked || busy || !queue) return
+    setBusy(true)
+    setPicked(choice)
+    const correct = choice.id === item.word.id
+    if (settings!.autoPlay) speakJapanese(item.word.reading, rate)
+    if (!item.retry) {
+      setScore((s) => (correct ? { ...s, correct: s.correct + 1 } : { ...s, wrong: s.wrong + 1 }))
+      const updated = review(item.card, correct, today)
+      await db.cards.put(updated)
+      await bumpLog(today, { reviews: 1, newLearned: item.isNew ? 1 : 0 })
+      if (!correct) setQueue([...queue, quizItem(item.word, updated, false, item.front, true)])
+    }
     setBusy(false)
   }
 
+  // ── 끝 화면
   if (!item) {
+    const total = score.correct + score.wrong
     return (
       <div className="study">
         <div className="study-done">
-          {reviewed > 0 ? (
+          {total > 0 ? (
             <>
               <div className="big-emoji">🎉</div>
-              <h2>오늘 단어 학습 완료!</h2>
-              <p className="hint">{reviewed}장을 넘겼어요. 내일 복습할 단어가 기다리고 있어요.</p>
+              <h2>학습 완료!</h2>
+              <p className="hint">
+                맞힘 <b className="good-text">{score.correct}</b> · 틀림 <b className="bad-text">{score.wrong}</b>
+              </p>
+              <p className="tiny">맞힌 단어는 며칠 뒤에, 틀린 단어는 내일 다시 나와요.</p>
             </>
           ) : (
             <>
-              <h2>오늘 할 단어가 없어요</h2>
+              <h2>지금 할 단어가 없어요</h2>
               <p className="hint">설정에서 하루 새 단어 수를 늘릴 수 있어요.</p>
             </>
           )}
@@ -79,7 +112,7 @@ export function Study({ onExit }: { onExit: () => void }) {
   }
 
   const { word } = item
-  const showReading = word.reading !== word.word
+  const isRight = picked && item.kind === 'quiz' && picked.id === word.id
 
   return (
     <div className="study">
@@ -95,57 +128,85 @@ export function Study({ onExit }: { onExit: () => void }) {
         </span>
       </div>
 
-      <div className="flash">
-        <span className={`badge ${item.isNew ? 'new' : ''}`}>
-          {item.isNew ? '새 단어' : '복습'} · {word.level}
-        </span>
-
-        {item.front === 'ja' ? (
-          <button className="word-big" lang="ja" onClick={() => speakJapanese(word.reading, rate)}>
-            {word.word}
-          </button>
-        ) : (
-          <div className="prompt">
-            <div className="meaning-big">{word.meaning}</div>
-            {!revealed && <p className="hint">🗣️ 일본어로 소리 내어 말해 보세요</p>}
+      {item.kind === 'intro' ? (
+        // ── 새 단어 소개
+        <div className="flash">
+          <span className="badge new">새 단어 · {word.level}</span>
+          <div className="word-big">
+            <WordText word={word.word} reading={word.reading} />
           </div>
-        )}
+          <ListenButton text={word.reading} rate={rate} />
+          <div className="meaning">{word.meaning}</div>
+          <ExampleBox word={word} rate={rate} furigana showKo />
+        </div>
+      ) : (
+        // ── 3지선다 문제
+        <div className="flash">
+          <span className={`badge ${item.isNew ? 'new' : ''}`}>
+            {item.retry ? '다시 풀기' : item.isNew ? '새 단어 확인' : '복습'} · {word.level}
+          </span>
 
-        {revealed && (
-          <div className="answer">
-            {item.front === 'ko' && (
-              <button className="word-big" lang="ja" onClick={() => speakJapanese(word.reading, rate)}>
-                {word.word}
-              </button>
-            )}
-            {showReading && (
-              <div className="reading" lang="ja">
-                {word.reading}
+          {item.front === 'ja' ? (
+            <>
+              <div className="word-big">
+                <WordText word={word.word} reading={word.reading} show={furigana} />
               </div>
-            )}
-            {item.front === 'ja' && <div className="meaning">{word.meaning}</div>}
-            <button className="example" onClick={() => speakJapanese(word.example, rate)}>
-              <span lang="ja">🔊 {word.example}</span>
-              <span className="ko">{word.exampleKo}</span>
-            </button>
+              <ListenButton text={word.reading} rate={rate} />
+              {!picked && (
+                <div className="context example-ja">
+                  <Furigana text={word.example} show={furigana} />
+                </div>
+              )}
+              <p className="question">뜻을 고르세요</p>
+            </>
+          ) : (
+            <>
+              <div className="meaning-big">{word.meaning}</div>
+              <p className="question">🗣️ 먼저 소리 내어 말해 보고, 일본어를 고르세요</p>
+            </>
+          )}
+
+          <div className="choices">
+            {item.choices.map((c) => {
+              const state = !picked ? '' : c.id === word.id ? 'right' : c.id === picked.id ? 'wrong' : 'dim'
+              return (
+                <button key={c.id} className={`choice ${state}`} onClick={() => choose(c)} disabled={!!picked}>
+                  {item.front === 'ja' ? c.meaning : <WordText word={c.word} reading={c.reading} show={furigana} />}
+                </button>
+              )
+            })}
           </div>
-        )}
-      </div>
+
+          {picked && (
+            <div className="answer">
+              <div className={`result ${isRight ? 'good-text' : 'bad-text'}`}>
+                {isRight
+                  ? `정답! ${item.retry ? '' : `${nextInterval(item.card, true)}일 후에 다시 볼게요`}`
+                  : `오답 — 정답은 위의 초록색${item.retry ? '' : ', 내일 다시 볼게요'}`}
+              </div>
+              {item.front === 'ko' && (
+                <>
+                  <div className="word-mid">
+                    <WordText word={word.word} reading={word.reading} />
+                  </div>
+                  <ListenButton text={word.reading} rate={rate} />
+                </>
+              )}
+              <ExampleBox word={word} rate={rate} furigana showKo />
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="study-actions">
-        {!revealed ? (
-          <button className="primary" onClick={() => setRevealed(true)}>
-            정답 보기
+        {item.kind === 'intro' ? (
+          <button className="primary" onClick={next}>
+            외웠어요 →
           </button>
         ) : (
-          <div className="grades">
-            {GRADES.map(({ grade: g, label }) => (
-              <button key={g} className={`grade ${g}`} disabled={busy} onClick={() => grade(g)}>
-                <b>{label}</b>
-                <span>{intervalLabel(nextInterval(item.card, g))}</span>
-              </button>
-            ))}
-          </div>
+          <button className="primary" onClick={next} disabled={!picked || busy}>
+            다음
+          </button>
         )}
       </div>
     </div>

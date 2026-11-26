@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { StudyMode } from './lib/session'
 import { Home } from './pages/Home'
 import { SettingsPage } from './pages/SettingsPage'
 import { Study } from './pages/Study'
@@ -14,14 +15,14 @@ const TABS: { id: Tab; icon: string; label: string }[] = [
 
 function App() {
   const [tab, setTab] = useState<Tab>('home')
-  const [studying, setStudying] = useState(false)
+  const [studying, setStudying] = useState<StudyMode | null>(null)
 
-  if (studying) return <Study onExit={() => setStudying(false)} />
+  if (studying) return <Study mode={studying} onExit={() => setStudying(null)} />
 
   return (
     <>
       <main className="app">
-        {tab === 'home' && <Home onStart={() => setStudying(true)} />}
+        {tab === 'home' && <Home onStart={setStudying} />}
         {tab === 'words' && <WordList />}
         {tab === 'settings' && <SettingsPage />}
       </main>

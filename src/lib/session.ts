@@ -1,21 +1,35 @@
-// 오늘 공부할 카드 목록 만들기: 복습할 카드(복습일이 된 것) + 새 단어
+// 오늘 공부할 카드 목록 만들기: 복습할 단어(복습일이 된 것) + 새 단어
 import { allWords, wordById, type Word } from '../data/vocab'
 import { db, type Direction, type Settings } from '../db/db'
 import { newCard, type CardState } from './srs'
 
-export interface QueueItem {
+export type StudyMode = 'all' | 'review' | 'new'
+
+/** 새 단어 소개 카드 */
+export interface IntroItem {
+  kind: 'intro'
+  word: Word
+}
+
+/** 3지선다 문제 카드 */
+export interface QuizItem {
+  kind: 'quiz'
   word: Word
   card: CardState
   isNew: boolean
-  front: 'ja' | 'ko' // 앞면에 보여줄 언어
+  front: 'ja' | 'ko' // ja: 일본어 보고 뜻 고르기, ko: 뜻 보고 일본어 고르기
+  choices: Word[]
+  retry: boolean // 틀린 문제를 학습 끝에 한 번 더 (일정에는 영향 없음)
 }
+
+export type QueueItem = IntroItem | QuizItem
 
 export interface TodayCounts {
   due: number
   newLeft: number
 }
 
-function shuffle<T>(arr: T[]): T[] {
+export function shuffle<T>(arr: T[]): T[] {
   const a = [...arr]
   for (let i = a.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1))
@@ -27,6 +41,18 @@ function shuffle<T>(arr: T[]): T[] {
 function pickFront(direction: Direction): 'ja' | 'ko' {
   if (direction === 'mix') return Math.random() < 0.5 ? 'ja' : 'ko'
   return direction === 'ja-ko' ? 'ja' : 'ko'
+}
+
+/** 정답 1개 + 오답 2개. 오답은 가능하면 같은 급수에서, 뜻·단어가 겹치지 않게 */
+export function makeChoices(word: Word, pool: Word[] = allWords): Word[] {
+  const ok = (w: Word) => w.id !== word.id && w.meaning !== word.meaning && w.word !== word.word
+  const same = shuffle(pool.filter((w) => ok(w) && w.level === word.level))
+  const other = shuffle(pool.filter((w) => ok(w) && w.level !== word.level))
+  return shuffle([word, ...[...same, ...other].slice(0, 2)])
+}
+
+export function quizItem(word: Word, card: CardState, isNew: boolean, front: 'ja' | 'ko', retry = false): QuizItem {
+  return { kind: 'quiz', word, card, isNew, front, choices: makeChoices(word), retry }
 }
 
 async function newWordsLeft(today: string, settings: Settings): Promise<Word[]> {
@@ -47,20 +73,13 @@ export async function getTodayCounts(today: string, settings: Settings): Promise
   return { due: due.length, newLeft: fresh.length }
 }
 
-export async function buildQueue(today: string, settings: Settings): Promise<QueueItem[]> {
-  const [due, fresh] = await Promise.all([dueCards(today), newWordsLeft(today, settings)])
-  const reviews: QueueItem[] = shuffle(due).map((card) => ({
-    word: wordById.get(card.id)!,
-    card,
-    isNew: false,
-    front: pickFront(settings.direction),
-  }))
-  // 새 단어는 처음 볼 때 일본어 → 한국어로 보여줘서 익히게 합니다.
-  const news: QueueItem[] = fresh.map((word) => ({
-    word,
-    card: newCard(word.id, today),
-    isNew: true,
-    front: 'ja',
-  }))
-  return [...reviews, ...news]
+export async function buildQueue(today: string, settings: Settings, mode: StudyMode = 'all'): Promise<QueueItem[]> {
+  const due = mode === 'new' ? [] : await dueCards(today)
+  const fresh = mode === 'review' ? [] : await newWordsLeft(today, settings)
+
+  const reviews = shuffle(due).map((card) => quizItem(wordById.get(card.id)!, card, false, pickFront(settings.direction)))
+  // 새 단어: 먼저 소개 카드로 보여주고, 다 본 뒤에 문제로 확인 (처음엔 일본어 → 뜻)
+  const intros: IntroItem[] = fresh.map((word) => ({ kind: 'intro', word }))
+  const newQuizzes = shuffle(fresh).map((word) => quizItem(word, newCard(word.id, today), true, 'ja'))
+  return [...reviews, ...intros, ...newQuizzes]
 }
