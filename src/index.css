@@ -78,10 +78,40 @@ header h1 { margin: 8px 0 4px; font-size: 1.6rem; }
 /* 연속 학습 */
 .streak-num { font-size: 1.4rem; font-weight: 800; margin-bottom: 12px; }
 .week { display: flex; justify-content: space-between; }
-.day { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--muted); }
+.day {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  font-size: 0.8rem; color: var(--muted);
+  border: none; background: none; padding: 4px 6px; border-radius: 10px;
+}
 .day i { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--border); }
 .day.on i { background: var(--accent); border-color: var(--accent); }
+.day.part i { border-color: var(--accent); background: var(--accent-soft); }
 .day.today span { color: var(--text); font-weight: 700; }
+.day.sel { background: var(--accent-soft); }
+.day.sel span { color: var(--accent); font-weight: 700; }
+
+/* 날짜별 학습 내용 */
+.day-detail { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+.day-detail h3 { margin: 0 0 8px; font-size: 1rem; }
+.day-detail h4 { margin: 14px 0 4px; font-size: 0.9rem; color: var(--muted); }
+.day-stats { display: flex; gap: 14px; font-size: 0.9rem; color: var(--muted); }
+.day-stats b { color: var(--text); }
+.day-words { list-style: none; margin: 0; padding: 0; }
+.day-words button {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 24px 1fr 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 2px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: none;
+  text-align: left;
+}
+.day-words .mark { font-size: 1.1rem; font-weight: 800; text-align: center; }
+.dw-ja { font-size: 1.05rem; line-height: 1.9; }
+.dw-ko { font-size: 0.85rem; color: var(--muted); }
 
 /* 하단 탭 */
 .tabbar {

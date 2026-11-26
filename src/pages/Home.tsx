@@ -1,4 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
+import { useState } from 'react'
+import { DayDetail } from '../components/DayDetail'
 import { allWords } from '../data/vocab'
 import { db, getSettings } from '../db/db'
 import { addDays, todayStr } from '../lib/date'
@@ -12,11 +14,13 @@ export function Home({ onStart }: { onStart: (mode: StudyMode) => void }) {
   const data = useLiveQuery(async () => {
     const settings = await getSettings()
     const [counts, logs] = await Promise.all([getTodayCounts(today, settings), db.logs.toArray()])
-    return { counts, logs }
+    return { counts, logs, settings }
   }, [today])
+  const [selected, setSelected] = useState<string | null>(null)
 
   if (!data) return null
-  const { counts, logs } = data
+  const { counts, logs, settings } = data
+  const studied = new Set(logs.filter((l) => l.reviews > 0).map((l) => l.date))
   const doneDates = new Set(logs.filter((l) => l.done).map((l) => l.date))
   const todayLog = logs.find((l) => l.date === today)
   const learnedToday = todayLog?.newLearned ?? 0
@@ -28,7 +32,7 @@ export function Home({ onStart }: { onStart: (mode: StudyMode) => void }) {
     <>
       <header>
         <h1>日本語 매일 20분</h1>
-        <p className="sub">목표: SJPT 레벨 5 · v0.1.3</p>
+        <p className="sub">목표: SJPT 레벨 5 · v0.1.4</p>
       </header>
 
       <section className="card streak">
@@ -36,14 +40,24 @@ export function Home({ onStart }: { onStart: (mode: StudyMode) => void }) {
         <div className="week">
           {week.map((d) => {
             const [y, m, day] = d.split('-').map(Number)
+            const cls = doneDates.has(d) ? 'on' : studied.has(d) ? 'part' : ''
             return (
-              <div key={d} className={`day ${doneDates.has(d) ? 'on' : ''} ${d === today ? 'today' : ''}`}>
+              <button
+                key={d}
+                className={`day ${cls} ${d === today ? 'today' : ''} ${d === selected ? 'sel' : ''}`}
+                onClick={() => setSelected(d === selected ? null : d)}
+              >
                 <span>{WEEKDAYS[new Date(y, m - 1, day).getDay()]}</span>
                 <i />
-              </div>
+              </button>
             )
           })}
         </div>
+        {selected ? (
+          <DayDetail date={selected} rate={settings.rate} />
+        ) : (
+          <p className="tiny center">요일을 누르면 그날 공부한 내용을 볼 수 있어요</p>
+        )}
       </section>
 
       <section className="card">

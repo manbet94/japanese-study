@@ -32,16 +32,32 @@ interface KvRow {
   value: unknown
 }
 
+/** 문제 하나를 푼 기록 (날짜별 학습 내용 보기용) */
+export interface HistoryRow {
+  id?: number
+  date: string
+  wordId: string
+  correct: boolean
+  isNew: boolean
+}
+
 export const db = new Dexie('japanese-study') as Dexie & {
   cards: EntityTable<CardState, 'id'>
   logs: EntityTable<DayLog, 'date'>
   kv: EntityTable<KvRow, 'key'>
+  history: EntityTable<HistoryRow, 'id'>
 }
 
 db.version(1).stores({
   cards: 'id, due',
   logs: 'date',
   kv: 'key',
+})
+
+// v2: 문제별 기록 추가 (기존 데이터는 그대로 유지)
+db.version(2).stores({
+  cards: 'id, due, firstSeen',
+  history: '++id, date',
 })
 
 export async function getSettings(): Promise<Settings> {

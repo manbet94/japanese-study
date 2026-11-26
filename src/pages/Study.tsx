@@ -90,6 +90,7 @@ export function Study({
       setScore((s) => (correct ? { ...s, correct: s.correct + 1 } : { ...s, wrong: s.wrong + 1 }))
       const updated = review(item.card, correct, today)
       await db.cards.put(updated)
+      await db.history.add({ date: today, wordId: item.word.id, correct, isNew: item.isNew })
       await bumpLog(today, { reviews: 1, newLearned: item.isNew ? 1 : 0 })
       if (!correct) setQueue([...queue, quizItem(item.word, updated, false, item.front, true)])
     }
