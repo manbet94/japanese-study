@@ -119,7 +119,10 @@ export function SettingsPage() {
         {persisted === false && <p className="tiny">※ 저장공간 보호가 아직 꺼져 있어요. 홈 화면 앱으로 자주 쓰면 자동으로 켜져요.</p>}
       </section>
 
-      <p className="tiny center">日本語 매일 20분 · v0.1</p>
+      <button className="secondary" onClick={() => location.reload()}>
+        🔄 앱 새로고침 (업데이트가 안 보일 때)
+      </button>
+      <p className="tiny center">日本語 매일 20분 · v0.1.1</p>
     </>
   )
 }

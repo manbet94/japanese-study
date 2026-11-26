@@ -32,7 +32,7 @@ export function Home({ onStart }: { onStart: () => void }) {
     <>
       <header>
         <h1>日本語 매일 20분</h1>
-        <p className="sub">목표: SJPT 레벨 5 · v0.1</p>
+        <p className="sub">목표: SJPT 레벨 5 · v0.1.1</p>
       </header>
 
       <section className="card streak">
