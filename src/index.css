@@ -308,3 +308,45 @@ rt { font-size: 0.5em; color: var(--accent); font-weight: 500; letter-spacing: 0
 }
 .rec-when { flex: 1; }
 .rec-len { color: var(--muted); font-size: 0.9rem; }
+
+/* SJPT 부별 */
+.back { border: none; background: none; color: var(--muted); padding: 4px 0; font-size: 0.95rem; }
+.part-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.part-card {
+  width: 100%; display: flex; align-items: center; gap: 12px; text-align: left;
+  padding: 14px; border-radius: 14px; border: 1px solid var(--border); background: var(--card);
+}
+.part-card.soon { opacity: 0.55; }
+.part-card:disabled { cursor: default; }
+.part-no {
+  flex-shrink: 0; width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center;
+  background: var(--accent-soft); color: var(--accent); font-weight: 800;
+}
+.part-card.soon .part-no { background: var(--border); color: var(--muted); }
+.part-body { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.part-body [lang='ja'] { color: var(--muted); font-size: 0.85rem; }
+.part-desc { font-size: 0.85rem; color: var(--muted); }
+.part-meta { font-size: 0.75rem; color: var(--muted); }
+.part-go { color: var(--muted); font-size: 1.4rem; }
+.part-card.soon .part-go { font-size: 0.75rem; }
+.part-tips { margin: 6px 4px 0 60px; padding: 0; list-style: '· '; font-size: 0.8rem; color: var(--muted); line-height: 1.9; }
+.sjpt-go { margin-bottom: 16px; }
+
+.sjpt {
+  min-height: calc(100dvh - 120px);
+  display: flex; flex-direction: column; gap: 12px;
+}
+.sjpt-part { margin: 0; color: var(--muted); font-size: 0.85rem; }
+.sjpt-q { padding: 14px; border-radius: 14px; background: var(--card); border: 1px solid var(--border); min-height: 72px; }
+.sjpt-q .example-ja { font-size: 1.2rem; }
+.sjpt-stage { display: flex; flex-direction: column; gap: 12px; }
+.sjpt-big { font-size: 1.3rem; font-weight: 700; text-align: center; padding: 8px 0; }
+.sjpt-big b { font-size: 2.2rem; color: var(--accent); }
+.sjpt-stage.prep .progress > div { background: var(--hard); transition: width 0.2s linear; }
+.sjpt-stage.answer .progress > div { transition: width 0.2s linear; }
+.sjpt-model { margin-top: 0; }
+.sjpt-toggle { margin-top: auto; font-size: 0.85rem; color: var(--muted); }
+.sjpt-summary { list-style: none; margin: 0; padding: 0; }
+.sjpt-summary li { padding: 10px 0; border-bottom: 1px solid var(--border); }
+.sjpt-summary .row { justify-content: flex-start; }
+.sjpt-summary .row > * { flex: 0 0 auto; }

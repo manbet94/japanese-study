@@ -1,5 +1,6 @@
 // 자기소개 만들기: 빈칸(이름·사는 곳·직업·가족·취미·공부 이유)을 고르면 일본어 문장으로 바꿔 줍니다.
 // 일본어 문장은 단어 예문과 같은 후리가나 표기를 씁니다: 会社{かいしゃ}
+import type { SjptQuestion } from '../data/sjpt'
 
 export interface Option {
   id: string
@@ -234,68 +235,107 @@ const PEOPLE: Record<number, string> = {
 
 const find = <T extends Option>(list: T[], id: string): T | undefined => list.find((o) => o.id === id)
 
-/** 빈칸을 채운 만큼 자기소개 문장을 만들어요. 안 고른 칸의 문장은 건너뜁니다. */
-export function buildIntro(p: Profile): Sentence[] {
-  const out: Sentence[] = []
+// ── 주제별 문장 (자기소개 전체와 SJPT 1부 질문 답에 같이 써요) ──
+
+function nameLine(p: Profile): Sentence | null {
   const name = p.name.trim()
-  out.push(
-    name
-      ? { ja: `はじめまして。${name}と申{もう}します。`, ko: `처음 뵙겠습니다. ${name}(이)라고 합니다.` }
-      : { ja: 'はじめまして。', ko: '처음 뵙겠습니다.' },
-  )
+  return name ? { ja: `${name}と申{もう}します。`, ko: `${name}(이)라고 합니다.` } : null
+}
 
-  if (p.age) out.push({ ja: `${p.age}歳{さい}です。`, ko: `${p.age}살입니다.` })
-
+function cityLine(p: Profile): Sentence | null {
   const city = find(CITIES, p.city)
-  if (city) {
+  if (!city) return null
+  return p.livesWith === 'family'
+    ? { ja: `${city.ja}に家族{かぞく}と住{す}んでいます。`, ko: `${city.ko}에서 가족과 살고 있습니다.` }
+    : { ja: `${city.ja}に一人{ひとり}で住{す}んでいます。`, ko: `${city.ko}에서 혼자 살고 있습니다.` }
+}
+
+function jobLines(p: Profile): Sentence[] {
+  const job = find(JOBS, p.job)
+  if (!job) return []
+  const out: Sentence[] = []
+  const field = find(FIELDS, p.field)
+  if (job.id === 'company' && field) {
+    out.push({
+      ja: `${job.ja}で、${field.ja}の仕事{しごと}をしています。`,
+      ko: `${job.ko}이고, ${field.ko} 일을 하고 있습니다.`,
+    })
+  } else {
+    out.push({ ja: `${job.ja}です。`, ko: `${job.ko}입니다.` })
+  }
+  if (p.years && job.id !== 'student') {
     out.push(
-      p.livesWith === 'family'
-        ? { ja: `${city.ja}に家族{かぞく}と住{す}んでいます。`, ko: `${city.ko}에서 가족과 살고 있습니다.` }
-        : { ja: `${city.ja}に一人{ひとり}で住{す}んでいます。`, ko: `${city.ko}에서 혼자 살고 있습니다.` },
+      job.id === 'company'
+        ? { ja: `入社{にゅうしゃ}して${p.years}年{ねん}になります。`, ko: `입사한 지 ${p.years}년 됐습니다.` }
+        : {
+            ja: `この仕事{しごと}を始{はじ}めて${p.years}年{ねん}になります。`,
+            ko: `이 일을 시작한 지 ${p.years}년 됐습니다.`,
+          },
     )
   }
+  return out
+}
 
-  const job = find(JOBS, p.job)
-  if (job) {
-    const field = find(FIELDS, p.field)
-    if (job.id === 'company' && field) {
-      out.push({
-        ja: `${job.ja}で、${field.ja}の仕事{しごと}をしています。`,
-        ko: `${job.ko}이고, ${field.ko} 일을 하고 있습니다.`,
-      })
-    } else {
-      out.push({ ja: `${job.ja}です。`, ko: `${job.ko}입니다.` })
-    }
-    if (p.years && job.id !== 'student') {
-      out.push(
-        job.id === 'company'
-          ? { ja: `入社{にゅうしゃ}して${p.years}年{ねん}になります。`, ko: `입사한 지 ${p.years}년 됐습니다.` }
-          : {
-              ja: `この仕事{しごと}を始{はじ}めて${p.years}年{ねん}になります。`,
-              ko: `이 일을 시작한 지 ${p.years}년 됐습니다.`,
-            },
-      )
-    }
-  }
-
+function familyLine(p: Profile): Sentence | null {
   const members = FAMILY.filter((f) => p.family.includes(f.id))
   const count = PEOPLE[members.length + 1]
-  if (members.length > 0 && count) {
-    out.push({
-      ja: `家族{かぞく}は${count}です。${[...members.map((m) => m.ja), '私{わたし}'].join('と')}です。`,
-      ko: `가족은 ${members.length + 1}명입니다. ${members.map((m) => m.ko).join(', ')}, 그리고 저입니다.`,
-    })
+  if (members.length === 0 || !count) return null
+  return {
+    ja: `家族{かぞく}は${count}です。${[...members.map((m) => m.ja), '私{わたし}'].join('と')}です。`,
+    ko: `가족은 ${members.length + 1}명입니다. ${members.map((m) => m.ko).join(', ')}, 그리고 저입니다.`,
   }
+}
 
+function hobbyLines(p: Profile): Sentence[] {
   const hobby = find(HOBBIES, p.hobby)
-  if (hobby) {
-    out.push({ ja: `趣味{しゅみ}は${hobby.ja}です。`, ko: `취미는 ${hobby.ko}입니다.` })
-    out.push(hobby.more)
-  }
+  return hobby ? [{ ja: `趣味{しゅみ}は${hobby.ja}です。`, ko: `취미는 ${hobby.ko}입니다.` }, hobby.more] : []
+}
 
+function reasonLine(p: Profile): Sentence | null {
   const reason = find(REASONS, p.reason)
-  if (reason) out.push({ ja: reason.ja, ko: reason.ko })
+  return reason ? { ja: reason.ja, ko: reason.ko } : null
+}
 
-  out.push({ ja: 'どうぞよろしくお願{ねが}いします。', ko: '잘 부탁드립니다.' })
-  return out
+const present = <T,>(x: T | null): x is T => x !== null
+
+/** 빈칸을 채운 만큼 자기소개 문장을 만들어요. 안 고른 칸의 문장은 건너뜁니다. */
+export function buildIntro(p: Profile): Sentence[] {
+  const name = nameLine(p)
+  return [
+    name
+      ? { ja: `はじめまして。${name.ja}`, ko: `처음 뵙겠습니다. ${name.ko}` }
+      : { ja: 'はじめまして。', ko: '처음 뵙겠습니다.' },
+    p.age ? { ja: `${p.age}歳{さい}です。`, ko: `${p.age}살입니다.` } : null,
+    cityLine(p),
+    ...jobLines(p),
+    familyLine(p),
+    ...hobbyLines(p),
+    reasonLine(p),
+    { ja: 'どうぞよろしくお願{ねが}いします。', ko: '잘 부탁드립니다.' },
+  ].filter(present)
+}
+
+/**
+ * SJPT 1부: 자기소개 질문과, 내 빈칸으로 만든 모범 답.
+ * 실제 시험처럼 이름을 먼저 묻고, 나머지는 섞어서 3개를 고르면 돼요.
+ */
+export function part1Questions(p: Profile): SjptQuestion[] {
+  const join = (lines: Sentence[]) =>
+    lines.length ? { answer: lines.map((s) => s.ja).join(''), answerKo: lines.map((s) => s.ko).join(' ') } : null
+  const items: [string, string, string, { answer: string; answerKo: string } | null][] = [
+    ['p1-name', 'お名前{なまえ}は何{なん}ですか。', '이름이 무엇입니까?', join([nameLine(p)].filter(present))],
+    ['p1-city', 'どこに住{す}んでいますか。', '어디에 살고 있습니까?', join([cityLine(p)].filter(present))],
+    ['p1-job', 'お仕事{しごと}は何{なん}ですか。', '무슨 일을 합니까?', join(jobLines(p))],
+    ['p1-family', 'ご家族{かぞく}は何人{なんにん}ですか。', '가족은 몇 명입니까?', join([familyLine(p)].filter(present))],
+    ['p1-hobby', '趣味{しゅみ}は何{なん}ですか。', '취미는 무엇입니까?', join(hobbyLines(p))],
+    [
+      'p1-reason',
+      'どうして日本語{にほんご}を勉強{べんきょう}していますか。',
+      '왜 일본어를 공부하고 있습니까?',
+      join([reasonLine(p)].filter(present)),
+    ],
+  ]
+  return items
+    .filter((it) => it[3] !== null)
+    .map(([id, ja, ko, a]) => ({ id, ja, ko, ...a! }))
 }

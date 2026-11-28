@@ -21,6 +21,7 @@ export interface Settings {
   rate: number
   furigana: boolean // 한자 위에 히라가나 표시
   newPos: PosFilter // 새 단어를 어떤 품사에서 배울지 ('all'이면 골고루 섞어서)
+  speakShowText: boolean // SJPT 연습에서 질문 글자를 보여줄지 (끄면 실제 시험처럼 듣기만)
 }
 
 export const defaultSettings: Settings = {
@@ -30,6 +31,7 @@ export const defaultSettings: Settings = {
   rate: 0.9,
   furigana: true,
   newPos: 'all',
+  speakShowText: true,
 }
 
 interface KvRow {
@@ -94,14 +96,16 @@ export async function saveProfile(profile: Profile): Promise<void> {
 }
 
 /** 녹음을 저장하고, 같은 연습의 오래된 녹음은 최근 KEEP_RECORDINGS개만 남기고 지워요. */
-export async function saveRecording(rec: Omit<RecordingRow, 'id'>): Promise<void> {
-  await db.transaction('rw', db.recordings, async () => {
-    await db.recordings.add(rec)
+export async function saveRecording(rec: Omit<RecordingRow, 'id'>): Promise<number> {
+  const id = await db.transaction('rw', db.recordings, async () => {
+    const newId = (await db.recordings.add(rec)) as number
     const all = await db.recordings.where('key').equals(rec.key).sortBy('createdAt')
     const old = all.slice(0, Math.max(0, all.length - KEEP_RECORDINGS))
     await db.recordings.bulkDelete(old.map((r) => r.id!))
+    return newId
   })
   await bumpLog(rec.date, { speaking: 1 })
+  return id
 }
 
 export async function getSettings(): Promise<Settings> {

@@ -13,13 +13,32 @@ export function hasJapaneseVoice(): boolean {
   return isTtsSupported() && pickJapaneseVoice() !== undefined
 }
 
-export function speakJapanese(text: string, rate = 0.9): void {
-  if (!isTtsSupported()) return
+/** onEnd: 다 읽었을 때(또는 읽기 실패·취소 시) 한 번 불려요. */
+export function speakJapanese(text: string, rate = 0.9, onEnd?: () => void): void {
+  if (!isTtsSupported()) {
+    onEnd?.()
+    return
+  }
   window.speechSynthesis.cancel()
   const u = new SpeechSynthesisUtterance(text)
   u.lang = 'ja-JP'
   u.rate = rate
   const voice = pickJapaneseVoice()
   if (voice) u.voice = voice
+  if (onEnd) {
+    let done = false
+    const finish = () => {
+      if (!done) {
+        done = true
+        onEnd()
+      }
+    }
+    u.onend = finish
+    u.onerror = finish
+  }
   window.speechSynthesis.speak(u)
+}
+
+export function stopSpeaking(): void {
+  if (isTtsSupported()) window.speechSynthesis.cancel()
 }

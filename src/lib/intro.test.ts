@@ -1,6 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import { hasKanji, parseFurigana } from './furigana'
-import { buildIntro, CITIES, defaultProfile, FAMILY, FIELDS, HOBBIES, JOBS, REASONS, type Profile } from './intro'
+import { PART3, PART4, partById, PARTS } from '../data/sjpt'
+import {
+  buildIntro,
+  CITIES,
+  defaultProfile,
+  FAMILY,
+  FIELDS,
+  HOBBIES,
+  JOBS,
+  part1Questions,
+  REASONS,
+  type Profile,
+} from './intro'
 
 const kanjiWithoutReading = (ja: string) =>
   hasKanji(
@@ -43,5 +55,33 @@ describe('자기소개 만들기', () => {
     ]
     const bad = profiles.flatMap((p) => buildIntro(p)).filter((s) => kanjiWithoutReading(s.ja) || !s.ko.trim())
     expect(bad).toEqual([])
+  })
+})
+
+describe('SJPT 문제', () => {
+  it('1부: 이름을 넣으면 이름 질문이 맨 앞, 고르지 않은 주제는 빠짐', () => {
+    const qs = part1Questions({ ...defaultProfile, name: 'キム' })
+    expect(qs[0].id).toBe('p1-name')
+    expect(qs[0].answer).toBe('キムと申{もう}します。')
+    expect(qs.some((q) => q.id === 'p1-family')).toBe(false) // 가족을 안 골랐음
+    expect(part1Questions(defaultProfile).some((q) => q.id === 'p1-name')).toBe(false)
+  })
+
+  it('부별 정보: 7개 부, 총 26문항', () => {
+    expect(PARTS).toHaveLength(7)
+    expect(PARTS.reduce((n, p) => n + p.count, 0)).toBe(26)
+  })
+
+  it('모든 문제·답·팁: 한자에 읽기, 빈칸 없음, id 겹치지 않음', () => {
+    const all = [...PART3, ...PART4, ...part1Questions({ ...defaultProfile, name: 'キム', family: ['mother'], years: 2 })]
+    expect(new Set(all.map((q) => q.id)).size).toBe(all.length)
+    const texts = [...all.flatMap((q) => [q.ja, q.answer, q.tip ?? '']), ...PARTS.flatMap((p) => p.tips)]
+    expect(texts.filter(kanjiWithoutReading)).toEqual([])
+    expect(all.filter((q) => !q.ko.trim() || !q.answerKo.trim() || !q.answer.trim())).toEqual([])
+  })
+
+  it('준비된 부는 실제 시험 문항 수보다 연습 문제가 많음', () => {
+    expect(PART3.length).toBeGreaterThanOrEqual(partById(3).count)
+    expect(PART4.length).toBeGreaterThanOrEqual(partById(4).count)
   })
 })

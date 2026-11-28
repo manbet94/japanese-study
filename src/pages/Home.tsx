@@ -33,7 +33,7 @@ export function Home({ onStart }: { onStart: (mode: StudyMode) => void }) {
     <>
       <header>
         <h1>日本語 매일 20분</h1>
-        <p className="sub">목표: SJPT 레벨 5 · v0.2.0</p>
+        <p className="sub">목표: SJPT 레벨 5 · v0.2.1</p>
       </header>
 
       <section className="card streak">
@@ -118,8 +118,9 @@ export function Home({ onStart }: { onStart: (mode: StudyMode) => void }) {
       <section className="card muted">
         <h2>다음 업데이트</h2>
         <ul>
-          <li>v0.2.1 시험처럼 질문에 답하기 (준비·답변 타이머)</li>
-          <li>v0.2.2 내가 말한 내용을 글자로 확인 (음성 인식)</li>
+          <li>v0.2.2 SJPT 2부·7부 (그림 보고 답하기, 4컷 이야기)</li>
+          <li>v0.2.3 SJPT 5부·6부 (의견 말하기, 상황 대응)</li>
+          <li>v0.2.4 내가 말한 내용을 글자로 확인 (음성 인식)</li>
           <li>v0.3 문법 레슨 + 문장 만들기</li>
         </ul>
       </section>

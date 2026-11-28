@@ -40,8 +40,11 @@ Single-page React app with no router. `App.tsx` switches between tabs (Home, Wor
   - `new`: one set of `settings.setSize` unseen words. There is no daily cap; the user repeats sets freely.
   - New words first appear as `intro` items, then as 3-choice `quiz` items.
   - A wrong answer appends a `retry` quiz to the end of the queue. Retries never change the schedule, the score, or the history.
-- **Speaking** (`pages/Speaking.tsx`, SJPT part 1 self-introduction):
-  - `src/lib/intro.ts` turns a `Profile` of fill-in choices into furigana-marked sentences. Every option's Japanese must carry readings; a test checks all options.
+- **Speaking** (`pages/Speaking.tsx`): a menu of SJPT parts 1–7. Part 1 opens the self-introduction page; other ready parts go straight to `pages/SjptPractice.tsx`.
+  - `src/data/sjpt.ts` holds `PARTS` (prep/answer seconds and question counts per part; parts with `comingIn` are shown disabled) and the practice question banks (`PART3`, `PART4`). The questions are original, not copied from real exams.
+  - `SjptPractice` runs a fixed loop for each question: question TTS → prep countdown → beep plus an auto-recorded answer countdown → review against the model answer. Recordings are saved under the key `sjpt:<questionId>`.
+  - `speakJapanese(text, rate, onEnd)` reports when the TTS finishes. Cancelling also fires `onEnd`, so callers guard with a token (see `listenToken`).
+  - `src/lib/intro.ts` turns a `Profile` of fill-in choices into furigana-marked sentences, and `part1Questions` builds part 1 model answers from the same profile. Every option's Japanese must carry readings; a test checks all options, questions, answers and tips.
   - `src/lib/recorder.ts` wraps `MediaRecorder`. Recordings are stored as Blobs, and only the newest `KEEP_RECORDINGS` per key are kept.
   - Each saved recording bumps `logs.speaking`. That marks the day as partly studied (`part` dot) but does not set `done`, so streaks still come from word study.
   - The Browser pane blocks the microphone. To test recording there, stub `navigator.mediaDevices.getUserMedia` with an `AudioContext` oscillator stream.

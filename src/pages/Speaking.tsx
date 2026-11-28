@@ -13,16 +13,36 @@ import {
   FIELDS,
   HOBBIES,
   JOBS,
+  part1Questions,
   REASONS,
   SURNAMES,
   type Option,
   type Profile,
 } from '../lib/intro'
+import { PART3, PART4, partById, PARTS, type PartId, type SjptQuestion } from '../data/sjpt'
+import { shuffle } from '../lib/session'
+import { SjptPractice } from './SjptPractice'
 import { isRecordingSupported, micErrorMessage, startRecording, type Recording } from '../lib/recorder'
 import { speakJapanese } from '../lib/speech'
 
 const REC_KEY = 'intro'
 const MAX_REC_MS = 3 * 60 * 1000 // 3분이 지나면 자동으로 멈춤
+
+type View = { kind: 'menu' } | { kind: 'intro' } | { kind: 'edit' } | { kind: 'practice'; part: PartId; run: number }
+
+/** 연습할 문제 고르기: 실제 시험 문항 수만큼 무작위로 (1부는 이름 질문을 맨 앞에) */
+function pickQuestions(part: PartId, profile: Profile | null): SjptQuestion[] {
+  const info = partById(part)
+  if (part === 1) {
+    const all = part1Questions(profile ?? defaultProfile)
+    const [first, ...rest] = all
+    return first?.id === 'p1-name'
+      ? [first, ...shuffle(rest).slice(0, info.count - 1)]
+      : shuffle(all).slice(0, info.count)
+  }
+  const pool = part === 3 ? PART3 : part === 4 ? PART4 : []
+  return shuffle(pool).slice(0, info.count)
+}
 
 export function Speaking() {
   const data = useLiveQuery(async () => {
@@ -33,26 +53,80 @@ export function Speaking() {
     ])
     return { profile, settings, recordings }
   }, [])
-  const [editing, setEditing] = useState(false)
+  const [view, setView] = useState<View>({ kind: 'menu' })
+  const [questions, setQuestions] = useState<SjptQuestion[]>([])
 
   if (!data) return null
   const { profile, settings, recordings } = data
 
-  if (!profile || editing) {
+  const practice = (part: PartId) => {
+    setQuestions(pickQuestions(part, profile))
+    setView((v) => ({ kind: 'practice', part, run: v.kind === 'practice' ? v.run + 1 : 0 }))
+    window.scrollTo(0, 0)
+  }
+  const toMenu = () => {
+    setView({ kind: 'menu' })
+    window.scrollTo(0, 0)
+  }
+
+  // 1부 실전은 자기소개 빈칸이 있어야 모범 답을 만들 수 있어요
+  if (view.kind === 'edit' || (view.kind === 'intro' && !profile)) {
     return (
       <>
         <header>
-          <h1>말하기</h1>
-          <p className="sub">내 자기소개 만들기 · 고른 만큼 일본어 문장이 돼요</p>
+          <h1>1부 · 자기소개 만들기</h1>
+          <p className="sub">고른 만큼 일본어 문장이 돼요</p>
         </header>
         <IntroForm
           initial={profile ?? defaultProfile}
           onSave={async (p) => {
             await saveProfile(p)
-            setEditing(false)
+            setView({ kind: 'intro' })
           }}
-          onCancel={profile ? () => setEditing(false) : undefined}
+          onCancel={() => setView(profile ? { kind: 'intro' } : { kind: 'menu' })}
         />
+      </>
+    )
+  }
+
+  if (view.kind === 'practice') {
+    return (
+      <SjptPractice
+        key={view.run}
+        part={partById(view.part)}
+        questions={questions}
+        rate={settings.rate}
+        showText={settings.speakShowText}
+        onExit={toMenu}
+        onAgain={() => practice(view.part)}
+      />
+    )
+  }
+
+  if (view.kind === 'intro' && profile) {
+    return (
+      <>
+        <header>
+          <button className="back" onClick={toMenu}>
+            ← 말하기
+          </button>
+          <h1>1부 · 자기소개</h1>
+          <p className="sub">내 자기소개를 외운 다음, 실전처럼 질문에 답해 봐요</p>
+        </header>
+        <IntroPractice profile={profile} rate={settings.rate} onEdit={() => setView({ kind: 'edit' })} />
+        <button className="primary sjpt-go" onClick={() => practice(1)}>
+          🎯 실전 연습: 질문 4개 · 각 10초
+        </button>
+        <Recorder recordings={recordings} />
+        <section className="card muted">
+          <h2>연습 순서</h2>
+          <ol>
+            <li>🔊 문장을 하나씩 듣고 따라 말해요.</li>
+            <li>"일본어 가리고 말해 보기"를 켜고 한국어만 보고 말해요.</li>
+            <li>🔴 전체를 녹음해서 모범 낭독과 비교해요.</li>
+            <li>🎯 실전 연습으로 질문을 듣고 10초 안에 답해요.</li>
+          </ol>
+        </section>
       </>
     )
   }
@@ -61,18 +135,44 @@ export function Speaking() {
     <>
       <header>
         <h1>말하기</h1>
-        <p className="sub">SJPT 1부 · 자기소개 연습</p>
+        <p className="sub">SJPT 부별 연습 · 실제 시험과 같은 준비·답변 시간</p>
       </header>
-      <IntroPractice profile={profile} rate={settings.rate} onEdit={() => setEditing(true)} />
-      <Recorder recordings={recordings} />
-      <section className="card muted">
-        <h2>연습 순서</h2>
-        <ol>
-          <li>🔊 문장을 하나씩 듣고 따라 말해요.</li>
-          <li>"일본어 가리고 말해 보기"를 켜고 한국어만 보고 말해요.</li>
-          <li>🔴 녹음한 뒤 모범 낭독과 번갈아 들어 봐요.</li>
-        </ol>
-      </section>
+      <ul className="part-list">
+        {PARTS.map((p) => {
+          const ready = !p.comingIn
+          return (
+            <li key={p.id}>
+              <button
+                className={`part-card ${ready ? '' : 'soon'}`}
+                disabled={!ready}
+                onClick={() => (p.id === 1 ? setView({ kind: 'intro' }) : practice(p.id))}
+              >
+                <span className="part-no">{p.id}부</span>
+                <span className="part-body">
+                  <b>{p.title}</b> <span lang="ja">{p.ja}</span>
+                  <span className="part-desc">{p.desc}</span>
+                  <span className="part-meta">
+                    {p.count}문항 · 준비 {p.prepSec}초 · 답변 {p.answerSec}초
+                  </span>
+                </span>
+                <span className="part-go">{ready ? '›' : p.comingIn}</span>
+              </button>
+              {ready && p.tips.length > 0 && p.id !== 1 && (
+                <ul className="part-tips">
+                  {p.tips.map((t) => (
+                    <li key={t}>
+                      <Furigana text={t} />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </li>
+          )
+        })}
+      </ul>
+      <p className="tiny">
+        시간과 문항 수는 시사일본어학원 SJPT 안내 기준이에요. 연습 문제와 모범 답안은 이 앱에서 직접 만든 거예요 (실제 기출 아님).
+      </p>
     </>
   )
 }
