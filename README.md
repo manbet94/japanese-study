@@ -1,32 +1,121 @@
-# React + TypeScript + Vite
+<p align="center">
+  <img src="public/icon-192.png" width="96" alt="앱 아이콘">
+</p>
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+<h1 align="center">日本語 매일 20분</h1>
 
-Currently, two official plugins are available:
+<p align="center">
+  SJPT(일본어 말하기 시험) 레벨 5를 목표로 만든 나만의 일본어 학습 앱<br>
+  👉 <a href="https://manbet94.github.io/japanese-study/"><b>앱 열기</b></a>
+</p>
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+## 어떤 앱인가요?
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+하루 20분씩 **단어를 외우고, 입으로 말하는 연습**을 하는 일본어 학습 앱이에요.
+목표인 SJPT는 말하기 시험이라서, 읽기 문제보다 **듣고 말하는 연습**에 더 힘을 줬어요.
 
-## Expanding the Oxlint configuration
+- **무료**: 서버도, 유료 서비스도 쓰지 않아요.
+- **내 폰에만 저장**: 학습 기록과 녹음은 폰 안에만 남고, 어디로도 보내지 않아요.
+- **앱처럼 설치**: 폰 홈 화면에 아이콘으로 깔아서 쓸 수 있어요(PWA).
+- **모든 일본어에 후리가나**: 한자 위에 히라가나 읽기가 붙어 있어요.
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+## 할 수 있는 것
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+### 📚 단어 공부
+- **단어 565개**: JLPT N5·N4 수준이고, 자기소개·직장·여행에 자주 쓰는 단어 위주예요.
+- **품사별로 골라 배우기**: 명사, 동사, 형용사, 부사, 기타(의문사·인사·접속사) 중에서 골라요.
+- **새 단어 학습 순서**: 소개 카드로 먼저 보고, 3지선다 문제로 확인해요. 한 세트는 5~20개이고, 원하는 만큼 반복할 수 있어요.
+- **자동 복습 일정**:
+  - 맞히면 3일 → 7일 → 14일 → 30일 뒤에 다시 나와요.
+  - 틀리면 다음 날 다시 나와요.
+- **예문과 발음**: 단어마다 예문과 한국어 해석이 있고, 🔊 버튼으로 일본어 발음을 들을 수 있어요.
+- **연속 학습일 🔥**: 요일을 누르면 그날 배운 단어와 맞힘·틀림 결과를 볼 수 있어요.
+
+### 🎤 말하기 (SJPT 부별 연습)
+실제 시험처럼 **질문 듣기 → 생각할 시간 → 답변 녹음 → 모범 답안과 비교** 순서로 연습해요.
+
+| 부 | 내용 | 준비 | 답변 | 앱에서 |
+|---|---|---|---|---|
+| 1부 | 자기소개 | 0초 | 10초 | ✅ 내 자기소개 만들기 + 실전 질문 |
+| 2부 | 그림 보고 답하기 | 3초 | 6초 | 준비 중 |
+| 3부 | 빠르게 대답하기 | 2초 | 15초 | ✅ 연습 문제 15개 |
+| 4부 | 짧게 설명하기 | 15초 | 25초 | ✅ 연습 문제 12개 |
+| 5부 | 의견 말하기 | 30초 | 50초 | 준비 중 |
+| 6부 | 상황 대응 | 30초 | 40초 | 준비 중 |
+| 7부 | 4컷 이야기 | 30초 | 90초 | 준비 중 |
+
+- **자기소개 만들기**: 이름, 사는 곳, 직업, 가족, 취미 같은 빈칸을 고르면 일본어 자기소개 문장이 완성돼요.
+- **녹음해서 비교**: 내 목소리를 녹음해서 모범 낭독과 번갈아 들어 볼 수 있어요.
+- **일본어 가리기**: 한국어만 보고 일본어로 말해 보는 연습을 할 수 있어요.
+
+> 시험 시간과 문항 수는 시사일본어학원의 SJPT 안내를 기준으로 했어요. 연습 문제와 모범 답안은 이 앱에서 직접 만든 것이고, 실제 기출 문제가 아니에요.
+
+## 폰에 설치하는 법 (갤럭시 · Chrome)
+
+1. 폰의 **Chrome**에서 https://manbet94.github.io/japanese-study/ 를 열어요.
+2. 오른쪽 위 **⋮ 메뉴 → "홈 화면에 추가"**(또는 "앱 설치")를 눌러요.
+3. 홈 화면에 생긴 **日本語** 아이콘으로 열면 앱처럼 써요.
+4. 처음 녹음할 때 "마이크 사용을 허용할까요?"가 뜨면 **허용**을 눌러요.
+
+새 버전이 나오면 앱을 껐다 켜거나 다른 앱에 갔다 돌아올 때 자동으로 업데이트돼요.
+업데이트가 안 보이면 **설정 → 🔄 앱 새로고침**을 눌러요.
+
+## 학습 기록 지키기
+
+학습 기록은 **이 폰의 Chrome 안에만** 저장돼요. 그래서 이럴 때는 기록이 사라질 수 있어요.
+
+- Chrome의 사이트 데이터를 지울 때
+- 폰을 바꿀 때
+- 앱 주소가 바뀔 때
+
+가끔 **설정 → 백업 파일 저장**으로 기록을 파일로 저장해 두세요.
+새 폰에서는 **설정 → 백업에서 복원**으로 되살릴 수 있어요.
+녹음은 용량이 커서 백업 파일에 들어가지 않아요.
+
+## 버전 기록
+
+| 버전 | 바뀐 점 |
+|---|---|
+| v0.2.1 | SJPT 부별 연습: 1·3·4부를 실제 시험 시간으로 |
+| v0.2.0 | 말하기 탭: 자기소개 만들기, 듣기, 녹음해서 비교 |
+| v0.1.5 | 단어 565개로 확대, 품사별로 골라 배우기 |
+| v0.1.4 | 요일을 누르면 그날 공부한 단어와 결과 보기 |
+| v0.1.3 | 새 단어를 세트 단위로 원하는 만큼 |
+| v0.1.2 | 후리가나, 3지선다 문제, 새 단어 소개, 복습 일정 |
+| v0.1.1 | 새 버전이 나오면 앱이 자동으로 업데이트 |
+| v0.1 | 단어 복습, 단어장, 연속 학습일, 설정·백업 |
+
+## 앞으로 만들 것
+
+- **v0.2.2**: SJPT 2부·7부 (그림 보고 답하기, 4컷 이야기)
+- **v0.2.3**: SJPT 5부·6부 (의견 말하기, 상황 대응)
+- **v0.2.4**: 내가 말한 내용을 글자로 확인 (음성 인식)
+- **v0.3**: 문법 레슨과 문장 만들기
+- **v0.5**: SJPT 모의고사 (26문항, 실제 시험 순서와 시간)
+
+---
+
+<details>
+<summary>개발자용 정보 (펼치기)</summary>
+
+### 사용한 기술
+- React + TypeScript + Vite
+- PWA: vite-plugin-pwa(서비스 워커 자동 생성)
+- 저장: IndexedDB(Dexie)
+- 음성: 브라우저 내장 Web Speech API(읽기), MediaRecorder(녹음)
+- 배포: `main` 브랜치에 올리면 GitHub Actions가 GitHub Pages에 자동 배포
+
+### 명령어
+```bash
+npm install      # 처음 한 번: 필요한 패키지 설치
+npm run dev      # 내 컴퓨터에서 실행 (http://localhost:5173)
+npm test         # 테스트
+npm run build    # 배포용으로 만들기
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+새 버전 배포는 Claude Code에서 `/release`를 입력하면 버전 표시 올리기부터 배포 확인까지 한 번에 해요.
+코드 구조와 규칙은 [CLAUDE.md](CLAUDE.md)에 정리되어 있어요.
+
+</details>
