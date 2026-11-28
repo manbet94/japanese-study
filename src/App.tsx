@@ -2,14 +2,16 @@ import { useState } from 'react'
 import type { StudyMode } from './lib/session'
 import { Home } from './pages/Home'
 import { SettingsPage } from './pages/SettingsPage'
+import { Speaking } from './pages/Speaking'
 import { Study } from './pages/Study'
 import { WordList } from './pages/WordList'
 
-type Tab = 'home' | 'words' | 'settings'
+type Tab = 'home' | 'words' | 'speak' | 'settings'
 
 const TABS: { id: Tab; icon: string; label: string }[] = [
   { id: 'home', icon: '🏠', label: '홈' },
   { id: 'words', icon: '📚', label: '단어장' },
+  { id: 'speak', icon: '🎤', label: '말하기' },
   { id: 'settings', icon: '⚙️', label: '설정' },
 ]
 
@@ -27,6 +29,7 @@ function App() {
       <main className="app">
         {tab === 'home' && <Home onStart={start} />}
         {tab === 'words' && <WordList />}
+        {tab === 'speak' && <Speaking />}
         {tab === 'settings' && <SettingsPage />}
       </main>
       <nav className="tabbar">

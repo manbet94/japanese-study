@@ -270,3 +270,41 @@ rt { font-size: 0.5em; color: var(--accent); font-weight: 500; letter-spacing: 0
   .status.learning { background: #3a2c14; color: #f0b35c; }
   .status.known { background: #163220; color: #5cd07e; }
 }
+
+/* 말하기 */
+.card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.card-head h2 { margin: 0; }
+.card h3 { margin: 14px 0 6px; font-size: 0.95rem; color: var(--muted); }
+.card.form h2 + .chips, .card.form h2 + input { margin-top: 4px; }
+.card.form h2:not(:first-child) { margin-top: 18px; }
+.card.muted ol { margin: 0; padding-left: 20px; line-height: 1.7; }
+.intro-lines { list-style: none; margin: 0 0 8px; padding: 0; }
+.intro-lines li { padding: 8px 0; border-bottom: 1px solid var(--border); }
+.intro-lines .example-ja { line-height: 2.1; }
+.intro-ko { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 0.85rem; }
+.intro-ko .listen { flex-shrink: 0; padding: 4px 12px; }
+.reveal {
+  width: 100%; padding: 10px; margin-bottom: 4px;
+  border: 1px dashed var(--border); border-radius: 10px; background: none; color: var(--muted);
+}
+.text-in {
+  width: 100%; padding: 12px; font: inherit; font-size: 1.05rem;
+  border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text);
+}
+.text-in.short { width: 120px; }
+.rec-btn {
+  width: 100%; padding: 16px; border-radius: 14px; font-weight: 700; font-size: 1.1rem;
+  border: 2px solid var(--accent); background: transparent; color: var(--accent);
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+}
+.rec-btn.on { background: var(--accent); color: #fff; }
+.rec-dot { width: 12px; height: 12px; border-radius: 50%; background: #fff; animation: blink 1s infinite; }
+@keyframes blink { 50% { opacity: 0.2; } }
+.rec-list { list-style: none; margin: 12px 0 0; padding: 0; }
+.rec-list li { display: flex; align-items: center; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+.rec-play {
+  width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+  border: 1px solid var(--border); background: var(--card); font-size: 1rem;
+}
+.rec-when { flex: 1; }
+.rec-len { color: var(--muted); font-size: 0.9rem; }

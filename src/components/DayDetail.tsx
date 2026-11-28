@@ -63,11 +63,18 @@ export function DayDetail({ date, rate }: { date: string; rate: number }) {
   const graded = [...firstResult.values()]
   const correct = graded.filter(Boolean).length
   const missingReviews = (log?.reviews ?? 0) > 0 && history.length === 0
+  const speaking = log?.speaking ?? 0
 
   return (
     <div className="day-detail">
       <h3>{title}</h3>
+      {speaking > 0 && (
+        <p className="hint">
+          🎤 말하기 녹음 <b>{speaking}</b>번
+        </p>
+      )}
       {newRows.length === 0 && reviewRows.length === 0 && !missingReviews ? (
+        speaking > 0 ? null :
         <p className="hint">이 날은 공부 기록이 없어요.</p>
       ) : (
         <>

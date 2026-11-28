@@ -23,7 +23,7 @@ npm run lint                     # oxlint
 
 ## Architecture
 
-Single-page React app with no router. `App.tsx` switches between tabs (Home, WordList, SettingsPage) and a full-screen `Study` session. Starting a session bumps a `run` key so that "one more set" remounts `Study` fresh.
+Single-page React app with no router. `App.tsx` switches between tabs (Home, WordList, Speaking, SettingsPage) and a full-screen `Study` session. Starting a session bumps a `run` key so that "one more set" remounts `Study` fresh.
 
 **Data flow:** `src/data/vocab.ts` holds the static word list. Progress lives in Dexie tables (`src/db/db.ts`). `src/lib/session.ts` combines the two into a study queue.
 
@@ -40,9 +40,14 @@ Single-page React app with no router. `App.tsx` switches between tabs (Home, Wor
   - `new`: one set of `settings.setSize` unseen words. There is no daily cap; the user repeats sets freely.
   - New words first appear as `intro` items, then as 3-choice `quiz` items.
   - A wrong answer appends a `retry` quiz to the end of the queue. Retries never change the schedule, the score, or the history.
-- **Database** (`src/db/db.ts`): tables `cards` (SRS state), `logs` (per-day counters plus the `done` flag used for streaks), `kv` (settings under the key `'settings'`, merged over `defaultSettings`), and `history` (one row per graded answer, used by `DayDetail`).
+- **Speaking** (`pages/Speaking.tsx`, SJPT part 1 self-introduction):
+  - `src/lib/intro.ts` turns a `Profile` of fill-in choices into furigana-marked sentences. Every option's Japanese must carry readings; a test checks all options.
+  - `src/lib/recorder.ts` wraps `MediaRecorder`. Recordings are stored as Blobs, and only the newest `KEEP_RECORDINGS` per key are kept.
+  - Each saved recording bumps `logs.speaking`. That marks the day as partly studied (`part` dot) but does not set `done`, so streaks still come from word study.
+  - The Browser pane blocks the microphone. To test recording there, stub `navigator.mediaDevices.getUserMedia` with an `AudioContext` oscillator stream.
+- **Database** (`src/db/db.ts`): tables `cards` (SRS state), `logs` (per-day counters plus the `done` flag used for streaks), `kv` (settings under `'settings'` merged over `defaultSettings`, and the self-intro under `'profile'`), `history` (one row per graded answer, used by `DayDetail`), and `recordings` (v3).
   - Schema changes must add a new `db.version(n)`. Never edit an existing version, because users' phones hold real data.
-  - When adding a table, also add it to `src/lib/backup.ts` (JSON export/import is the only migration path between devices or origins).
+  - When adding a table, also add it to `src/lib/backup.ts` (JSON export/import is the only migration path between devices or origins). The one exception is `recordings`, which is left out of backups on purpose because of its size.
 - **Dates** are local-time `YYYY-MM-DD` strings (`src/lib/date.ts`), never `Date` objects or UTC.
 - **PWA updates:** `main.tsx` calls `registerSW({ immediate: true })` and also checks for an update on `visibilitychange`. The app is kept in memory on Android, so updates must not depend on a fresh launch.
 - **Version label:** shown in both `pages/Home.tsx` and `pages/SettingsPage.tsx`. Bump both with each release.
