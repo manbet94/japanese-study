@@ -18,6 +18,7 @@ npx vitest run -t "후리가나"       # run tests whose name matches
 npm run lint                     # oxlint
 ```
 
+- **Release:** the user runs `/release [version]` (`.claude/skills/release/SKILL.md`). It bumps the version labels, runs tests/lint/build, commits, pushes and polls the live site until the new label shows up. The service worker needs no manual cache-version bump, because `generateSW` re-hashes on every build.
 - **Deploy:** pushing to `main` triggers `.github/workflows/deploy.yml`. It builds with `vite build --base=/<repo-name>/` and publishes to GitHub Pages at https://manbet94.github.io/japanese-study/. No manual deploy step exists.
 - **Dev server after `npm install`:** restart the dev server whenever dependencies change. Otherwise Vite serves stale optimized deps (a 504 "Outdated Optimize Dep" error) and the page renders blank.
 
