@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { allWords } from '../data/vocab'
+import { allWords, posGroup } from '../data/vocab'
 import { addDays, diffDays } from './date'
 import { hasKanji, kanaText, parseFurigana, plainText, wordSegments } from './furigana'
-import { makeChoices } from './session'
+import { makeChoices, meaningKeys, newWordOrder } from './session'
 import { newCard, review } from './srs'
 import { calcStreak } from './streak'
 
@@ -61,6 +61,40 @@ describe('3지선다', () => {
       expect(new Set(choices.map((c) => c.meaning)).size).toBe(3)
     }
   })
+
+  it('모든 단어: 뜻이 겹치는 오답이 없고, 오답은 같은 품사', () => {
+    for (const w of allWords) {
+      const keys = new Set(meaningKeys(w.meaning))
+      const wrong = makeChoices(w).filter((c) => c.id !== w.id)
+      expect(wrong).toHaveLength(2)
+      for (const c of wrong) {
+        expect(meaningKeys(c.meaning).some((k) => keys.has(k)), `${w.word} ↔ ${c.word}`).toBe(false)
+        expect(posGroup(c.pos), `${w.word} ↔ ${c.word}`).toBe(posGroup(w.pos))
+      }
+    }
+  })
+
+  it('뜻 핵심어 뽑기', () => {
+    expect(meaningKeys('(옷을) 입다')).toEqual(['입'])
+    expect(meaningKeys('위험하다')).toEqual(meaningKeys('위험함'))
+  })
+})
+
+describe('새 단어 순서', () => {
+  it('전체: 단어가 빠짐없이, N5 먼저, 첫 세트에 여러 품사가 섞임', () => {
+    const order = newWordOrder(allWords, 'all')
+    expect(new Set(order.map((w) => w.id)).size).toBe(allWords.length)
+    const firstN4 = order.findIndex((w) => w.level === 'N4')
+    expect(order.slice(firstN4).every((w) => w.level === 'N4')).toBe(true)
+    expect(new Set(order.slice(0, 10).map((w) => posGroup(w.pos))).size).toBeGreaterThanOrEqual(3)
+  })
+
+  it('품사를 고르면 그 품사만, 원래 순서대로', () => {
+    const verbs = newWordOrder(allWords, 'verb')
+    expect(verbs.length).toBeGreaterThan(0)
+    expect(verbs.every((w) => w.pos === 'verb')).toBe(true)
+    expect(verbs).toEqual(allWords.filter((w) => w.pos === 'verb'))
+  })
 })
 
 describe('date', () => {
@@ -99,6 +133,11 @@ describe('단어 데이터', () => {
       return hasKanji(outside)
     })
     expect(missing.map((w) => w.example)).toEqual([])
+  })
+
+  it('같은 단어가 N5와 N4에 겹쳐 들어가지 않음', () => {
+    const n5 = new Set(allWords.filter((w) => w.level === 'N5').map((w) => w.word))
+    expect(allWords.filter((w) => w.level === 'N4' && n5.has(w.word)).map((w) => w.word)).toEqual([])
   })
 
   it('읽기 칸은 히라가나/가타카나만', () => {

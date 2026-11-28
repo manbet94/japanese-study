@@ -1,5 +1,6 @@
 // 폰 안의 저장소(IndexedDB). 학습 기록은 이 폰(브라우저)에만 저장됩니다. → 설정에서 백업 가능
 import Dexie, { type EntityTable } from 'dexie'
+import type { PosFilter } from '../data/vocab'
 import type { CardState } from '../lib/srs'
 
 export interface DayLog {
@@ -17,6 +18,7 @@ export interface Settings {
   autoPlay: boolean
   rate: number
   furigana: boolean // 한자 위에 히라가나 표시
+  newPos: PosFilter // 새 단어를 어떤 품사에서 배울지 ('all'이면 골고루 섞어서)
 }
 
 export const defaultSettings: Settings = {
@@ -25,6 +27,7 @@ export const defaultSettings: Settings = {
   autoPlay: true,
   rate: 0.9,
   furigana: true,
+  newPos: 'all',
 }
 
 interface KvRow {

@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useState } from 'react'
 import { Furigana, WordText } from '../components/Furigana'
-import { allWords, examplePlain, type Level } from '../data/vocab'
+import { allWords, examplePlain, LEVELS, matchPos, POS_FILTERS, POS_LABEL, type Level, type PosFilter } from '../data/vocab'
 import { db, getSettings } from '../db/db'
 import { diffDays, todayStr } from '../lib/date'
 import { speakJapanese } from '../lib/speech'
@@ -9,6 +9,7 @@ import { isKnown } from '../lib/srs'
 
 export function WordList() {
   const [level, setLevel] = useState<Level>('N5')
+  const [pos, setPos] = useState<PosFilter>('all')
   const [open, setOpen] = useState<string | null>(null)
   const data = useLiveQuery(async () => ({ cards: await db.cards.toArray(), settings: await getSettings() }), [])
   if (!data) return null
@@ -16,7 +17,7 @@ export function WordList() {
   const { cards, settings } = data
   const byId = new Map(cards.map((c) => [c.id, c]))
   const today = todayStr()
-  const words = allWords.filter((w) => w.level === level)
+  const words = allWords.filter((w) => w.level === level && matchPos(w, pos))
   const learned = words.filter((w) => byId.has(w.id)).length
 
   function status(id: string): { text: string; cls: string } {
@@ -37,9 +38,16 @@ export function WordList() {
         </p>
       </header>
       <div className="chips">
-        {(['N5', 'N4'] as Level[]).map((l) => (
+        {LEVELS.map((l) => (
           <button key={l} className={`chip ${l === level ? 'on' : ''}`} onClick={() => setLevel(l)}>
             {l}
+          </button>
+        ))}
+      </div>
+      <div className="chips">
+        {POS_FILTERS.map((f) => (
+          <button key={f.id} className={`chip small ${f.id === pos ? 'on' : ''}`} onClick={() => setPos(f.id)}>
+            {f.label}
           </button>
         ))}
       </div>
@@ -64,6 +72,7 @@ export function WordList() {
               </button>
               {isOpen && (
                 <div className="wl-detail">
+                  <div className="tiny">{POS_LABEL[w.pos]}</div>
                   <div className="example-ja">
                     <Furigana text={w.example} show={settings.furigana} />
                   </div>

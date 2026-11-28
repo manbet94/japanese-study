@@ -1,8 +1,8 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useState } from 'react'
 import { DayDetail } from '../components/DayDetail'
-import { allWords } from '../data/vocab'
-import { db, getSettings } from '../db/db'
+import { allWords, POS_FILTERS } from '../data/vocab'
+import { db, getSettings, saveSettings } from '../db/db'
 import { addDays, todayStr } from '../lib/date'
 import { getTodayCounts, type StudyMode } from '../lib/session'
 import { calcStreak } from '../lib/streak'
@@ -27,12 +27,13 @@ export function Home({ onStart }: { onStart: (mode: StudyMode) => void }) {
   const streak = calcStreak(doneDates, today)
   const learned = allWords.length - counts.unseen
   const week = Array.from({ length: 7 }, (_, i) => addDays(today, i - 6))
+  const posName = settings.newPos === 'all' ? '' : `${POS_FILTERS.find((f) => f.id === settings.newPos)?.label} `
 
   return (
     <>
       <header>
         <h1>日本語 매일 20분</h1>
-        <p className="sub">목표: SJPT 레벨 5 · v0.1.4</p>
+        <p className="sub">목표: SJPT 레벨 5 · v0.1.5</p>
       </header>
 
       <section className="card streak">
@@ -81,10 +82,28 @@ export function Home({ onStart }: { onStart: (mode: StudyMode) => void }) {
         <p className="hint">
           오늘 배운 새 단어 <b>{learnedToday}</b>개 · 시간 되는 만큼 세트를 반복하세요
         </p>
+        {counts.unseen > 0 && (
+          <>
+            <p className="tiny">어떤 단어를 배울까요? (숫자는 남은 단어)</p>
+            <div className="chips">
+              {POS_FILTERS.map((f) => (
+                <button
+                  key={f.id}
+                  className={`chip ${f.id === settings.newPos ? 'on' : ''}`}
+                  onClick={() => saveSettings({ newPos: f.id })}
+                >
+                  {f.label} {counts.unseenByPos[f.id]}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
         {counts.nextSet > 0 ? (
           <button className={counts.due > 0 ? 'secondary big' : 'primary'} onClick={() => onStart('new')}>
-            새 단어 {counts.nextSet}개 배우기 {learnedToday > 0 && '(한 세트 더)'}
+            {posName}새 단어 {counts.nextSet}개 배우기 {learnedToday > 0 && '(한 세트 더)'}
           </button>
+        ) : counts.unseen > 0 ? (
+          <p className="ok">이 품사의 단어는 모두 배웠어요! 다른 품사를 골라 보세요.</p>
         ) : (
           <p className="ok">준비된 단어를 모두 배웠어요! 🎉</p>
         )}

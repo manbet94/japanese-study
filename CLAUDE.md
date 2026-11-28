@@ -27,8 +27,10 @@ Single-page React app with no router. `App.tsx` switches between tabs (Home, Wor
 
 **Data flow:** `src/data/vocab.ts` holds the static word list. Progress lives in Dexie tables (`src/db/db.ts`). `src/lib/session.ts` combines the two into a study queue.
 
-- **Vocab data** (`src/data/vocab.ts`): compact tuple rows `[word, reading, meaning, example, exampleKo]`, one array per JLPT level.
-  - A word's id is `${level}:${word}`. Renaming a word's `word` field orphans its saved progress.
+- **Vocab data** (`src/data/vocab.ts`): compact tuple rows `[word, reading, meaning, example, exampleKo]`, grouped by part of speech as `[pos, rows[]]` (`noun`, `verb`, `i-adj`, `na-adj`, `adv`, `other`), one array of groups per JLPT level.
+  - A word's id is `${level}:${word}`. Renaming a word's `word` field orphans its saved progress. Moving a row between groups or reordering is safe.
+  - The UI filters by `PosFilter`, which merges い/な adjectives into `adj`. `settings.newPos` picks the POS for new-word sets. With `all`, `interleaveByPos` mixes parts of speech evenly (N5 before N4).
+  - Quiz distractors prefer the same POS, and `meaningKeys` drops any whose meaning overlaps the answer's (e.g. 思う/考える). Keep meanings distinct when adding words; a test checks every word.
   - Examples carry inline furigana markup on **every** kanji run: `会社{かいしゃ}へ行{い}きます。`. A test fails if any kanji in an example is missing a reading.
   - `src/lib/furigana.ts` parses the markup. It also auto-derives ruby for headwords by stripping the kana prefix and suffix shared by word and reading (大きい/おおきい → 大(おお)きい).
   - Use `plainText()` / `examplePlain()` when passing an example to TTS.
